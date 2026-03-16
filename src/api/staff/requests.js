@@ -1,0 +1,165 @@
+import axiosServices from "../index";
+import { getStaffBaseUrl } from "./index";
+import { getStorageItem } from "../../utils/localStorageHandler";
+import { STORAGE_KEYS } from "../../constants/storageKeys";
+
+const API_VERSION = import.meta.env.VITE_API_VERSION || "v1";
+
+const api = {
+  /** Service requests */
+  getServiceRequests: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/service-request`
+    );
+    return response.data;
+  },
+
+  getServiceRequestById: async (id) => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/service-request/${id}`
+    );
+    return response.data;
+  },
+
+  getServiceRequestStatuses: async () => {
+    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    // Backend has typo "tentant"
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/service-request/status/tentant/${tenantId}`
+    );
+    return response.data;
+  },
+
+  updateServiceRequestStatus: async (payload) => {
+    const response = await axiosServices.put(
+      `/${getStaffBaseUrl()}/service-request/${payload.id}/status`,
+      payload
+    );
+    return response.data;
+  },
+
+  getServiceRequestCount: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/service-request/staff-service-count`
+    );
+    const raw = response.data;
+    return raw?.data !== undefined ? raw.data : raw;
+  },
+
+  /** Service requests created by the current staff (for "My requests" tab). */
+  getMyServiceRequests: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/service-request/created-by`
+    );
+    const data = response.data;
+    return Array.isArray(data) ? data : data?.list ?? data?.data ?? [];
+  },
+
+  /** Create service request as staff (name/phone from token in backend). */
+  createServiceRequestByStaff: async (payload) => {
+    const response = await axiosServices.post(
+      `/${getStaffBaseUrl()}/service-request`,
+      payload
+    );
+    return response.data;
+  },
+
+  /** Rooms for staff's location (flat list). Always returns array. */
+  getRoomsForStaff: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/rooms`
+    );
+    const data = response?.data;
+    return Array.isArray(data) ? data : (data?.list ?? []);
+  },
+
+  /** Blocks for staff's location (tenantId + locationId from storage). */
+  getBlocksForStaff: async () => {
+    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const locationId = getStorageItem(STORAGE_KEYS.LOCATION_ID);
+    const base = `/${getStaffBaseUrl()}/blocks`;
+    const params = tenantId && locationId ? `?tenantId=${tenantId}&locationId=${locationId}` : "";
+    const response = await axiosServices.get(base + params);
+    const data = response?.data;
+    return Array.isArray(data) ? data : (data?.list ?? []);
+  },
+
+  /** Floors for a block. */
+  getFloorsByBlock: async (blockId) => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/blocks/${blockId}/floors`
+    );
+    const data = response?.data;
+    return Array.isArray(data) ? data : (data?.list ?? []);
+  },
+
+  /** Rooms for a floor. */
+  getRoomsByFloor: async (floorId) => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/floors/${floorId}/rooms`
+    );
+    const data = response?.data;
+    return Array.isArray(data) ? data : (data?.list ?? []);
+  },
+
+  /** Services for location (for create-request form). Uses user API path. */
+  getServicesForLocation: async () => {
+    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const locationId = getStorageItem(STORAGE_KEYS.LOCATION_ID);
+    if (!tenantId || !locationId) return [];
+    const response = await axiosServices.get(
+      `/${API_VERSION}/user/tenant/${tenantId}/location/${locationId}/services`
+    );
+    return Array.isArray(response.data) ? response.data : response.data?.list ?? [];
+  },
+
+  /** Product requests */
+  getProductRequests: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/product-request`
+    );
+    return response.data;
+  },
+
+  getProductRequestById: async (id) => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/product-request/${id}`
+    );
+    return response.data;
+  },
+
+  getProductRequestStatuses: async () => {
+    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/product-request/status/tentant/${tenantId}`
+    );
+    return response.data;
+  },
+
+  updateProductRequestStatus: async (payload) => {
+    const response = await axiosServices.put(
+      `/${getStaffBaseUrl()}/product-request/${payload.id}/status`,
+      payload
+    );
+    return response.data;
+  },
+
+  getProductRequestCount: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/product-request/staff-service-count`
+    );
+    const raw = response.data;
+    return raw?.data !== undefined ? raw.data : raw;
+  },
+
+  /** Product requests created by the current staff (for "My requests" tab). */
+  getMyProductRequests: async () => {
+    const response = await axiosServices.get(
+      `/${getStaffBaseUrl()}/product-request/created-by`
+    );
+    const data = response.data;
+    return Array.isArray(data) ? data : data?.list ?? data?.data ?? [];
+  },
+};
+
+export { api };
