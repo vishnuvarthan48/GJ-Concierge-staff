@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Box, Paper, Typography, Button, IconButton } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import { toast } from "react-toastify";
 import { useStaffProductRequestList } from "../../query-hooks/requests/useStaffProductRequestList";
 import { useStaffProductRequestStatuses } from "../../query-hooks/requests/useStaffProductRequestStatuses";
 import { useUpdateStaffProductRequestStatus } from "../../query-hooks/requests/useUpdateStaffProductRequestStatus";
@@ -8,8 +9,11 @@ import UpdateStatusPopup from "./UpdateStatusPopup";
 import RequestDetailDialog from "./RequestDetailDialog";
 import RequestCard from "./RequestCard";
 import { useState } from "react";
+import { useIsDepartmentAdminStaff } from "../../hooks/useIsDepartmentAdminStaff";
+import { STAFF_FILTER_UNASSIGNED } from "../../constants/staffRequestFilters";
 
-const ProductRequestsList = ({ statusFilter = "" }) => {
+const ProductRequestsList = ({ statusFilter = "", staffFilter = "" }) => {
+  const isDeptAdmin = useIsDepartmentAdminStaff();
   const [updateStatusPopupOpen, setUpdateStatusPopupOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -45,6 +49,7 @@ const ProductRequestsList = ({ statusFilter = "" }) => {
     return Array.from(groups.values()).map((items) => ({
       items,
       id: items[0]?.id,
+      assignedTo: items[0]?.assignedTo,
       productNames: items.map((r) => r?.product?.name).filter(Boolean).join(", ") || "—",
       room: items[0]?.room,
       status: items[0]?.status,
@@ -55,11 +60,23 @@ const ProductRequestsList = ({ statusFilter = "" }) => {
   }, [data]);
 
   const filteredData = useMemo(() => {
-    if (!statusFilter) return groupedData;
-    return groupedData.filter((row) =>
-      row?.items?.some((r) => r?.status?.id === statusFilter)
-    );
-  }, [groupedData, statusFilter]);
+    let rows = groupedData;
+    if (statusFilter) {
+      rows = rows.filter((row) =>
+        row?.items?.some((r) => r?.status?.id === statusFilter)
+      );
+    }
+    if (staffFilter) {
+      if (staffFilter === STAFF_FILTER_UNASSIGNED) {
+        rows = rows.filter((row) => row?.items?.every((r) => !r?.assignedTo?.id));
+      } else {
+        rows = rows.filter((row) =>
+          row?.items?.some((r) => r?.assignedTo?.id === staffFilter)
+        );
+      }
+    }
+    return rows;
+  }, [groupedData, statusFilter, staffFilter]);
 
   const handleSaveStatus = (payload, onSuccess) => {
     updateMutation.mutate(payload, { onSuccess: () => onSuccess?.() });
@@ -90,7 +107,9 @@ const ProductRequestsList = ({ statusFilter = "" }) => {
     return (
       <Box sx={{ textAlign: "center", py: 4 }}>
         <Typography color="text.secondary">
-          No product requests assigned to you
+          {isDeptAdmin
+            ? "No product requests in your department"
+            : "No product requests assigned to you"}
         </Typography>
       </Box>
     );
@@ -114,6 +133,7 @@ const ProductRequestsList = ({ statusFilter = "" }) => {
           key={row.id}
           type="product"
           row={row}
+          departmentAdminView={isDeptAdmin}
           isClosed={isStatusClosed(row)}
           onCardClick={() => {
             setDetailRequest(row);
@@ -132,6 +152,7 @@ const ProductRequestsList = ({ statusFilter = "" }) => {
         statusesLoading={statusesLoading}
         statusesError={!!statusesError}
         onSave={handleSaveStatus}
+        onAllSuccess={() => toast.success("Status updated successfully.")}
         isSaving={updateMutation.isPending}
       />
 

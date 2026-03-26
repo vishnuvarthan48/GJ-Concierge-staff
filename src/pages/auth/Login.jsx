@@ -1,4 +1,15 @@
-import { Box, Button, TextField, Typography, Paper } from "@mui/material";
+import { useState } from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  InputAdornment,
+  IconButton,
+} from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -13,6 +24,8 @@ import { useNavigate } from "react-router-dom";
 import { MODULES } from "../../constants/modules";
 import { toast } from "react-toastify";
 
+const LOGIN_USERNAME_KEY = "login_username";
+
 const validationSchema = Yup.object({
   username: Yup.string().required("Username or Email is required"),
   password: Yup.string().required("Password is required"),
@@ -21,6 +34,16 @@ const validationSchema = Yup.object({
 const Login = () => {
   const { handleLogin } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const formik = useFormik({
+    initialValues: {
+      username: typeof sessionStorage !== "undefined" ? (sessionStorage.getItem(LOGIN_USERNAME_KEY) || "") : "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: (values) => loginMutation.mutate(values),
+  });
 
   const loginMutation = useMutation({
     mutationFn: api.login,
@@ -59,6 +82,9 @@ const Login = () => {
           staff = await ensureStaffForUser(data.id, data.tenantId, data.locationId);
         }
         if (staff?.id) {
+          try {
+            sessionStorage.removeItem(LOGIN_USERNAME_KEY);
+          } catch (_) {}
           handleLogin(data, staff);
           navigate(`/${MODULES.DASHBOARD}`);
         } else {
@@ -67,6 +93,11 @@ const Login = () => {
           removeStorageItem(STORAGE_KEYS.USER);
           removeStorageItem(STORAGE_KEYS.TENANT_ID);
           removeStorageItem(STORAGE_KEYS.LOCATION_ID);
+          if (formik.values.username) {
+            try {
+              sessionStorage.setItem(LOGIN_USERNAME_KEY, formik.values.username);
+            } catch (_) {}
+          }
           toast.error("No staff profile found. Contact admin.");
         }
       } catch (err) {
@@ -75,6 +106,11 @@ const Login = () => {
         removeStorageItem(STORAGE_KEYS.USER);
         removeStorageItem(STORAGE_KEYS.TENANT_ID);
         removeStorageItem(STORAGE_KEYS.LOCATION_ID);
+        if (formik.values.username) {
+          try {
+            sessionStorage.setItem(LOGIN_USERNAME_KEY, formik.values.username);
+          } catch (_) {}
+        }
         toast.error(err?.response?.status === 403
           ? "Access denied. Staff role required."
           : err?.response?.status === 404
@@ -83,14 +119,13 @@ const Login = () => {
       }
     },
     onError: (err) => {
+      if (formik.values.username) {
+        try {
+          sessionStorage.setItem(LOGIN_USERNAME_KEY, formik.values.username);
+        } catch (_) {}
+      }
       toast.error(err?.response?.data?.error_description || err?.message || "Login failed");
     },
-  });
-
-  const formik = useFormik({
-    initialValues: { username: "", password: "" },
-    validationSchema,
-    onSubmit: (values) => loginMutation.mutate(values),
   });
 
   return (
@@ -157,7 +192,7 @@ const Login = () => {
             </Typography>
             <TextField
               fullWidth
-              type="password"
+              type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Enter your password"
               autoComplete="current-password"
@@ -167,6 +202,21 @@ const Login = () => {
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
               sx={{ "& .MuiInputBase-root": { minHeight: 48 } }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((p) => !p)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </Box>
 

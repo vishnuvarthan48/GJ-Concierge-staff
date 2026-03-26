@@ -12,6 +12,7 @@ import { useUpdateStaffProductRequestStatus } from "../../query-hooks/requests/u
 import UpdateStatusPopup from "./UpdateStatusPopup";
 import RequestDetailDialog from "./RequestDetailDialog";
 import RequestCard from "./RequestCard";
+import { toast } from "react-toastify";
 
 export default function MyRequestsList() {
   const staffId = getStorageItem(STORAGE_KEYS.STAFF_ID);
@@ -186,6 +187,7 @@ export default function MyRequestsList() {
         statusesLoading={false}
         statusesError={false}
         onSave={handleSaveStatus}
+        onAllSuccess={() => toast.success("Status updated successfully.")}
         isSaving={isSaving}
       />
     </Box>

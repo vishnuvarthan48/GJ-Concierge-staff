@@ -22,6 +22,16 @@ export const ensureStaffForUser = async (userId, tenantId, locationId) => {
   return unwrap(response.data);
 };
 
+/** Department staffs (for department admin staff tab). */
+export const getDepartmentStaffs = async ({ tenantId, locationId, departmentId }) => {
+  if (!tenantId || !locationId || !departmentId) return [];
+  const response = await axiosServices.get(
+    `/${API_VERSION}/admin/tenant/${tenantId}/location/${locationId}/staff/department/${departmentId}`
+  );
+  const data = unwrap(response.data);
+  return Array.isArray(data) ? data : data?.list ?? [];
+};
+
 /** Build staff base URL: /v1/staff/{staffId} - uses staffId from localStorage */
 export const getStaffBaseUrl = () => {
   const staffId = getStorageItem(STORAGE_KEYS.STAFF_ID);

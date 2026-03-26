@@ -4,6 +4,7 @@ import PageNotFound from "../components/common/PageNotFound";
 import MainLayout from "../layout/MainLayout";
 import Dashboard from "../pages/dashboard/Dashboard";
 import RequestsList from "../pages/requests/RequestsList";
+import DepartmentStaffs from "../pages/staff/DepartmentStaffs";
 import CreateServiceRequest from "../pages/create-request/CreateServiceRequest";
 import CreateRequestErrorFallback from "../pages/create-request/CreateRequestErrorFallback";
 import { MODULES } from "../constants/modules";
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
       {
         path: MODULES.REQUESTS,
         element: <RequestsList />,
+      },
+      {
+        path: MODULES.STAFF,
+        element: <DepartmentStaffs />,
       },
       {
         path: MODULES.CREATE_REQUEST,

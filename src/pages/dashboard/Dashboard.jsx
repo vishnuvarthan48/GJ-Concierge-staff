@@ -17,9 +17,11 @@ import { useStaffProductRequestStatuses } from "../../query-hooks/requests/useSt
 import { useUpdateStaffServiceRequestStatus } from "../../query-hooks/requests/useUpdateStaffServiceRequestStatus";
 import { useUpdateStaffProductRequestStatus } from "../../query-hooks/requests/useUpdateStaffProductRequestStatus";
 import { useAuth } from "../../hooks/useAuth";
+import { useIsDepartmentAdminStaff } from "../../hooks/useIsDepartmentAdminStaff";
 import RequestCard from "../requests/RequestCard";
 import RequestDetailDialog from "../requests/RequestDetailDialog";
 import UpdateStatusPopup from "../requests/UpdateStatusPopup";
+import { toast } from "react-toastify";
 
 const SummaryCard = ({ title, count, icon: Icon, onClick }) => (
   <Card
@@ -64,6 +66,7 @@ const SummaryCard = ({ title, count, icon: Icon, onClick }) => (
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isDeptAdmin = useIsDepartmentAdminStaff();
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRequest, setDetailRequest] = useState(null);
   const [detailType, setDetailType] = useState("service");
@@ -203,7 +206,7 @@ const Dashboard = () => {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12 }}>
           <SummaryCard
-            title="Total Requests"
+            title={isDeptAdmin ? "Total department requests" : "Total requests"}
             count={countsLoading ? "…" : countsError ? "—" : total}
             icon={AssignmentIcon}
             onClick={() => goToRequests()}
@@ -211,7 +214,7 @@ const Dashboard = () => {
         </Grid>
         <Grid size={{ xs: 12 }}>
           <SummaryCard
-            title="Service Requests"
+            title={isDeptAdmin ? "Department service requests" : "Service requests"}
             count={serviceCountLoading ? "…" : serviceCountError ? "—" : totalService}
             icon={BuildIcon}
             onClick={() => goToRequests("service")}
@@ -219,7 +222,7 @@ const Dashboard = () => {
         </Grid>
         <Grid size={{ xs: 12 }}>
           <SummaryCard
-            title="Product Requests"
+            title={isDeptAdmin ? "Department product requests" : "Product requests"}
             count={productCountLoading ? "…" : productCountError ? "—" : totalProduct}
             icon={ShoppingCartIcon}
             onClick={() => goToRequests("products")}
@@ -227,7 +230,7 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 3 }}>
         <Box
           sx={{
             display: "flex",
@@ -237,7 +240,7 @@ const Dashboard = () => {
           }}
         >
           <Typography variant="subtitle1" fontWeight={600}>
-            Recent requests
+            {isDeptAdmin ? "Recent department requests" : "Recent requests"}
           </Typography>
           <Button variant="outlined" size="small" onClick={() => goToRequests()}>
             View all
@@ -247,6 +250,7 @@ const Dashboard = () => {
           <RequestCard
             type={lastRequest.type}
             row={lastRequest.row}
+            departmentAdminView={isDeptAdmin}
             isClosed={isRecentClosed}
             onCardClick={handleRecentCardClick}
             onUpdateClick={handleRecentUpdateClick}
@@ -279,6 +283,7 @@ const Dashboard = () => {
         statusesLoading={statusesLoading}
         statusesError={statusesError}
         onSave={handleSaveStatus}
+        onAllSuccess={() => toast.success("Status updated successfully.")}
         isSaving={isSaving}
       />
 

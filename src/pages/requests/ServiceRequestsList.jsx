@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Box, Paper, Typography, Button, IconButton } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import { toast } from "react-toastify";
 import { useStaffServiceRequestList } from "../../query-hooks/requests/useStaffServiceRequestList";
 import { useStaffServiceRequestStatuses } from "../../query-hooks/requests/useStaffServiceRequestStatuses";
 import { useUpdateStaffServiceRequestStatus } from "../../query-hooks/requests/useUpdateStaffServiceRequestStatus";
@@ -8,8 +9,11 @@ import UpdateStatusPopup from "./UpdateStatusPopup";
 import RequestDetailDialog from "./RequestDetailDialog";
 import RequestCard from "./RequestCard";
 import { useState } from "react";
+import { useIsDepartmentAdminStaff } from "../../hooks/useIsDepartmentAdminStaff";
+import { STAFF_FILTER_UNASSIGNED } from "../../constants/staffRequestFilters";
 
-const ServiceRequestsList = ({ statusFilter = "" }) => {
+const ServiceRequestsList = ({ statusFilter = "", staffFilter = "" }) => {
+  const isDeptAdmin = useIsDepartmentAdminStaff();
   const [updateStatusPopupOpen, setUpdateStatusPopupOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -32,9 +36,19 @@ const ServiceRequestsList = ({ statusFilter = "" }) => {
   };
 
   const filteredData = useMemo(() => {
-    if (!statusFilter) return data;
-    return data.filter((row) => row?.status?.id === statusFilter);
-  }, [data, statusFilter]);
+    let rows = data;
+    if (statusFilter) {
+      rows = rows.filter((row) => row?.status?.id === statusFilter);
+    }
+    if (staffFilter) {
+      if (staffFilter === STAFF_FILTER_UNASSIGNED) {
+        rows = rows.filter((row) => !row?.assignedTo?.id);
+      } else {
+        rows = rows.filter((row) => row?.assignedTo?.id === staffFilter);
+      }
+    }
+    return rows;
+  }, [data, statusFilter, staffFilter]);
 
   const handleSaveStatus = (payload, onSuccess) => {
     updateMutation.mutate(payload, { onSuccess: () => onSuccess?.() });
@@ -65,7 +79,9 @@ const ServiceRequestsList = ({ statusFilter = "" }) => {
     return (
       <Box sx={{ textAlign: "center", py: 4 }}>
         <Typography color="text.secondary">
-          No service requests assigned to you
+          {isDeptAdmin
+            ? "No service requests in your department"
+            : "No service requests assigned to you"}
         </Typography>
       </Box>
     );
@@ -89,6 +105,7 @@ const ServiceRequestsList = ({ statusFilter = "" }) => {
           key={row.id}
           type="service"
           row={row}
+          departmentAdminView={isDeptAdmin}
           isClosed={isStatusClosed(row)}
           onCardClick={() => {
             setDetailRequest(row);
@@ -107,6 +124,7 @@ const ServiceRequestsList = ({ statusFilter = "" }) => {
         statusesLoading={statusesLoading}
         statusesError={!!statusesError}
         onSave={handleSaveStatus}
+        onAllSuccess={() => toast.success("Status updated successfully.")}
         isSaving={updateMutation.isPending}
       />
 

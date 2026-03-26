@@ -1,5 +1,6 @@
 export const QUERY_KEYS = {
   STAFF: "staff",
+  DEPARTMENT_STAFFS: "department-staffs",
   SERVICE_REQUESTS: "service-requests",
   SERVICE_REQUEST_DETAIL: "service-request-detail",
   SERVICE_REQUEST_STATUSES: "service-request-statuses",

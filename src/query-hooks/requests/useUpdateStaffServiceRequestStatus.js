@@ -16,7 +16,7 @@ export const useUpdateStaffServiceRequestStatus = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries([QUERY_KEYS.SERVICE_REQUESTS]);
-      toast.success("Status updated successfully.");
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SERVICE_REQUEST_DETAIL] });
     },
     onError: (error) => {
       toast.error(error.message || "Failed to update status.");

@@ -57,8 +57,17 @@ export const AuthProvider = ({ children }) => {
 
   const handleLogin = (response, staff) => {
     const userId = response.id ?? response.user_id;
-    const tenantIdVal = response.tenantId ?? response.tenant_id;
-    const locationIdVal = response.locationId ?? response.location_id;
+    const tenantIdVal =
+      response.tenantId ??
+      response.tenant_id ??
+      staff?.tenantId ??
+      staff?.location?.tenantId ??
+      null;
+    const locationIdVal =
+      response.locationId ??
+      response.location_id ??
+      staff?.location?.id ??
+      null;
     const userObj = {
       id: userId,
       firstName: response.firstName,

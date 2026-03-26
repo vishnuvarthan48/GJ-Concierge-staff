@@ -2,14 +2,18 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { BottomNavigation, BottomNavigationAction } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import PeopleIcon from "@mui/icons-material/People";
 import { MODULES } from "../../constants/modules";
+import { useIsDepartmentAdminStaff } from "../../hooks/useIsDepartmentAdminStaff";
 
 export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
+  const isDeptAdmin = useIsDepartmentAdminStaff();
 
   const value =
+    path.includes(MODULES.STAFF) ? "staff" :
     path.includes(MODULES.REQUESTS) ? "requests" :
     path.includes(MODULES.DASHBOARD) ? "dashboard" : "dashboard";
 
@@ -19,6 +23,7 @@ export default function BottomNav() {
       onChange={(_, v) => {
         if (v === "dashboard") navigate(`/${MODULES.DASHBOARD}`);
         if (v === "requests") navigate(`/${MODULES.REQUESTS}`);
+        if (v === "staff") navigate(`/${MODULES.STAFF}`);
       }}
       showLabels
       sx={{
@@ -43,6 +48,13 @@ export default function BottomNav() {
         value="requests"
         icon={<AssignmentIcon />}
       />
+      {isDeptAdmin && (
+        <BottomNavigationAction
+          label="Staff"
+          value="staff"
+          icon={<PeopleIcon />}
+        />
+      )}
     </BottomNavigation>
   );
 }

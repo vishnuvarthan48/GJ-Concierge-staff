@@ -2,6 +2,7 @@ import axiosServices from "../index";
 import { getStaffBaseUrl } from "./index";
 import { getStorageItem } from "../../utils/localStorageHandler";
 import { STORAGE_KEYS } from "../../constants/storageKeys";
+import { resolveTenantId } from "../../utils/resolveTenantId";
 
 const API_VERSION = import.meta.env.VITE_API_VERSION || "v1";
 
@@ -22,10 +23,10 @@ const api = {
   },
 
   getServiceRequestStatuses: async () => {
-    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
-    // Backend has typo "tentant"
+    const tenantId = resolveTenantId(getStorageItem(STORAGE_KEYS.STAFF));
+    if (!tenantId) return [];
     const response = await axiosServices.get(
-      `/${getStaffBaseUrl()}/service-request/status/tentant/${tenantId}`
+      `/${getStaffBaseUrl()}/service-request/status/tenant/${tenantId}`
     );
     return response.data;
   },
@@ -75,7 +76,7 @@ const api = {
 
   /** Blocks for staff's location (tenantId + locationId from storage). */
   getBlocksForStaff: async () => {
-    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const tenantId = resolveTenantId(getStorageItem(STORAGE_KEYS.STAFF));
     const locationId = getStorageItem(STORAGE_KEYS.LOCATION_ID);
     const base = `/${getStaffBaseUrl()}/blocks`;
     const params = tenantId && locationId ? `?tenantId=${tenantId}&locationId=${locationId}` : "";
@@ -104,7 +105,7 @@ const api = {
 
   /** Services for location (for create-request form). Uses user API path. */
   getServicesForLocation: async () => {
-    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const tenantId = resolveTenantId(getStorageItem(STORAGE_KEYS.STAFF));
     const locationId = getStorageItem(STORAGE_KEYS.LOCATION_ID);
     if (!tenantId || !locationId) return [];
     const response = await axiosServices.get(
@@ -129,9 +130,10 @@ const api = {
   },
 
   getProductRequestStatuses: async () => {
-    const tenantId = getStorageItem(STORAGE_KEYS.TENANT_ID);
+    const tenantId = resolveTenantId(getStorageItem(STORAGE_KEYS.STAFF));
+    if (!tenantId) return [];
     const response = await axiosServices.get(
-      `/${getStaffBaseUrl()}/product-request/status/tentant/${tenantId}`
+      `/${getStaffBaseUrl()}/product-request/status/tenant/${tenantId}`
     );
     return response.data;
   },

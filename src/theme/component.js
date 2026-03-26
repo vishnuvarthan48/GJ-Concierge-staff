@@ -1,3 +1,4 @@
+import { alpha } from "@mui/material/styles";
 import { tableComponents } from "./components/table";
 
 /* Mobile-first: min 44px touch targets, larger inputs */
@@ -60,7 +61,31 @@ const components = {
       root: () => ({
         height: 42,
         borderRadius: 3,
+        overflow: "hidden",
       }),
+      input: ({ theme }) => {
+        const isDark = theme.palette.mode === "dark";
+        const autofillBg = isDark
+          ? alpha(theme.palette.primary.main, 0.06)
+          : alpha(theme.palette.primary.main, 0.04);
+        return {
+          "&:-webkit-autofill": {
+            WebkitBoxShadow: `0 0 0 100px ${autofillBg} inset`,
+            boxShadow: `0 0 0 100px ${autofillBg} inset`,
+            WebkitTextFillColor: theme.palette.text.primary,
+            borderRadius: 3,
+            transition: "background-color 5000s ease-in-out 0s",
+          },
+          "&:-webkit-autofill:hover": {
+            WebkitBoxShadow: `0 0 0 100px ${autofillBg} inset`,
+            boxShadow: `0 0 0 100px ${autofillBg} inset`,
+          },
+          "&:-webkit-autofill:focus": {
+            WebkitBoxShadow: `0 0 0 100px ${autofillBg} inset`,
+            boxShadow: `0 0 0 100px ${autofillBg} inset`,
+          },
+        };
+      },
     },
   },
   MuiInputLabel: {

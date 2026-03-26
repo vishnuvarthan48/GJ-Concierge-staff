@@ -1,5 +1,6 @@
 import { Box, Card, CardContent, Typography, Button } from "@mui/material";
 import dayjs from "dayjs";
+import { staffAssigneeDisplayName } from "../../utils/staffDisplayName";
 
 const formatDate = (ts) => (ts == null ? "—" : dayjs(ts).format("DD MMM, HH:mm"));
 
@@ -11,9 +12,21 @@ const formatDate = (ts) => (ts == null ? "—" : dayjs(ts).format("DD MMM, HH:mm
  * @param { () => void } onCardClick
  * @param { (e: React.MouseEvent) => void } onUpdateClick
  * @param { boolean } showUpdateButton - If false, hides the Update Status button (e.g. view-only in My requests when not assigned)
+ * @param { boolean } departmentAdminView - When true, show assignee above the update button
  */
-export default function RequestCard({ type, row, isClosed, onCardClick, onUpdateClick, showUpdateButton = true }) {
+export default function RequestCard({
+  type,
+  row,
+  isClosed,
+  onCardClick,
+  onUpdateClick,
+  showUpdateButton = true,
+  departmentAdminView = false,
+}) {
   const title = type === "service" ? row?.service?.name || "—" : row?.productNames || "—";
+  const assignedTo =
+    type === "service" ? row?.assignedTo : row?.items?.[0]?.assignedTo ?? row?.assignedTo;
+  const assigneeName = staffAssigneeDisplayName(assignedTo);
 
   return (
     <Card
@@ -61,6 +74,11 @@ export default function RequestCard({ type, row, isClosed, onCardClick, onUpdate
           <Typography variant="caption" color="text.secondary">
             {formatDate(row?.updatedDate)}
           </Typography>
+          {departmentAdminView && showUpdateButton && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Assigned to: {assigneeName || "—"}
+            </Typography>
+          )}
           {showUpdateButton && (
             <Button
               variant="contained"

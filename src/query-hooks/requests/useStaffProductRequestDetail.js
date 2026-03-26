@@ -7,7 +7,8 @@ export const useStaffProductRequestDetail = (id, options = {}, keys = []) => {
     queryKey: [QUERY_KEYS.PRODUCT_REQUEST_DETAIL, id, ...keys],
     queryFn: async () => {
       const res = await api.getProductRequestById(id);
-      const data = res?.data !== undefined ? res.data : res;
+      const raw = res?.data !== undefined ? res.data : res;
+      const data = raw?.data !== undefined ? raw.data : raw;
       return data ? { ...data, groupItems: data?.groupItems ?? (data ? [data] : []) } : null;
     },
     enabled: Boolean(id),

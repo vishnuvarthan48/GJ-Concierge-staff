@@ -53,6 +53,9 @@ const getStatusColor = (statusName, isProduct) => {
 
 const formatDate = (ts) => (ts == null ? "—" : dayjs(ts).format("DD MMM YYYY, HH:mm"));
 
+const getAttachmentUrl = (at) =>
+  at?.attachment?.mediaUrl ?? at?.attachment?.mediaURL ?? at?.mediaUrl ?? at?.mediaURL ?? null;
+
 const DetailRow = ({ label, value }) => (
   <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
     <Typography variant="body2" color="text.secondary" sx={{ minWidth: 120, fontSize: "0.875rem" }}>
@@ -215,6 +218,44 @@ export default function RequestDetailDialog({ open, onClose, type, requestId, li
                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.875rem" }}>
                               {stepComment}
                             </Typography>
+                          )}
+                          {Array.isArray(h?.attachments) && h.attachments.length > 0 && (
+                            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
+                              {h.attachments.map((at, i) => {
+                                const url = getAttachmentUrl(at);
+                                if (!url) return null;
+                                return (
+                                  <Box
+                                    key={at?.id ?? i}
+                                    component="a"
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    sx={{
+                                      display: "block",
+                                      width: 72,
+                                      height: 72,
+                                      borderRadius: 1,
+                                      overflow: "hidden",
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <Box
+                                      component="img"
+                                      src={url}
+                                      alt=""
+                                      sx={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                      }}
+                                    />
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
                           )}
                         </StepContent>
                       </Step>
