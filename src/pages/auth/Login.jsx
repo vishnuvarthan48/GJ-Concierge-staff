@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -7,34 +7,69 @@ import {
   Paper,
   InputAdornment,
   IconButton,
+  Alert,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
-import GJ_Concierge_Light from "../../assets/images/GJ_Concierge_Light.svg";
+import GJ_Concierge_Dark from "../../assets/images/GJ_Concierge_Dark.svg";
 import { api } from "../../api/auth";
 import { getStaffByUserId, ensureStaffForUser } from "../../api/staff";
 import { setStorageItem, removeStorageItem } from "../../utils/localStorageHandler";
 import { STORAGE_KEYS } from "../../constants/storageKeys";
 import { useAuth } from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { MODULES } from "../../constants/modules";
 import { toast } from "react-toastify";
 
 const LOGIN_USERNAME_KEY = "login_username";
+const PASSWORD_RESET_FLASH_KEY = "password_reset_flash_message";
 
 const validationSchema = Yup.object({
   username: Yup.string().required("Username or Email is required"),
   password: Yup.string().required("Password is required"),
 });
 
+const getLoginErrorMessage = (err) => {
+  if (!err) return "";
+  const oauthDescription = err?.response?.data?.error_description;
+  const backendMessage = err?.response?.data?.message;
+  const wrapperStatusMessage = err?.response?.data?.status?.message;
+  if (oauthDescription) return oauthDescription;
+  if (backendMessage) return backendMessage;
+  if (wrapperStatusMessage) return wrapperStatusMessage;
+  if (err?.message) return err.message;
+  return "Login failed. Please try again.";
+};
+
 const Login = () => {
   const { handleLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState("");
+  const [showResetSuccessDialog, setShowResetSuccessDialog] = useState(false);
+
+  useEffect(() => {
+    const message =
+      location?.state?.postResetMessage ||
+      (typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem(PASSWORD_RESET_FLASH_KEY)
+        : null);
+    if (!message) return;
+    setResetSuccessMessage(message);
+    setShowResetSuccessDialog(true);
+    try {
+      sessionStorage.removeItem(PASSWORD_RESET_FLASH_KEY);
+    } catch (_) {}
+  }, [location]);
 
   const formik = useFormik({
     initialValues: {
@@ -124,7 +159,6 @@ const Login = () => {
           sessionStorage.setItem(LOGIN_USERNAME_KEY, formik.values.username);
         } catch (_) {}
       }
-      toast.error(err?.response?.data?.error_description || err?.message || "Login failed");
     },
   });
 
@@ -132,7 +166,6 @@ const Login = () => {
     <Box
       sx={{
         minHeight: "100dvh",
-        minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -146,12 +179,16 @@ const Login = () => {
           width: "100%",
           maxWidth: 380,
           p: 3,
-          borderRadius: 3,
+          borderRadius: 2,
+          border: "1px solid",
+          borderColor: "divider",
+          boxShadow: (theme) =>
+            `0 16px 30px ${theme.palette.mode === "dark" ? "rgba(0,0,0,0.32)" : "rgba(0,0,0,0.09)"}`,
         }}
       >
         <Box textAlign="center" mb={2}>
           <img
-            src={GJ_Concierge_Light}
+            src={GJ_Concierge_Dark}
             alt="GJ Concierge"
             style={{ height: 48, maxWidth: "100%" }}
           />
@@ -166,6 +203,11 @@ const Login = () => {
         </Typography>
 
         <form onSubmit={formik.handleSubmit}>
+          {loginMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {getLoginErrorMessage(loginMutation.error)}
+            </Alert>
+          )}
           <Box mb={2}>
             <Typography variant="body2" sx={{ mb: 0.5 }}>
               Email
@@ -182,7 +224,7 @@ const Login = () => {
               onBlur={formik.handleBlur}
               error={formik.touched.username && Boolean(formik.errors.username)}
               helperText={formik.touched.username && formik.errors.username}
-              sx={{ "& .MuiInputBase-root": { minHeight: 48 } }}
+              sx={{ "& .MuiInputBase-root": { minHeight: 46 } }}
             />
           </Box>
 
@@ -201,7 +243,7 @@ const Login = () => {
               onBlur={formik.handleBlur}
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
-              sx={{ "& .MuiInputBase-root": { minHeight: 48 } }}
+              sx={{ "& .MuiInputBase-root": { minHeight: 46 } }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -225,12 +267,39 @@ const Login = () => {
             fullWidth
             variant="contained"
             disabled={loginMutation.isPending}
-            sx={{ minHeight: 48, borderRadius: 2 }}
+            sx={{ minHeight: 46 }}
           >
             {loginMutation.isPending ? "Signing in…" : "Sign In"}
           </Button>
         </form>
       </Paper>
+
+      <Dialog
+        open={showResetSuccessDialog}
+        onClose={() => {}}
+        disableEscapeKeyDown
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogContent sx={{ textAlign: "center", pt: 4 }}>
+          <CheckCircleRoundedIcon color="success" sx={{ fontSize: 84, mb: 1 }} />
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Password Reset Successfully
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {resetSuccessMessage || "Password reset successfully. Login again to continue."}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setShowResetSuccessDialog(false)}
+          >
+            Login again
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

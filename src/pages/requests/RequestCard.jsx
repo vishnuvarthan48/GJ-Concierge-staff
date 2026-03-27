@@ -32,9 +32,9 @@ export default function RequestCard({
     <Card
       variant="outlined"
       sx={{
-        borderRadius: 2,
         overflow: "hidden",
         cursor: "pointer",
+        "&:active": { boxShadow: 3, transform: "translateY(-1px)" },
       }}
       onClick={onCardClick}
     >
@@ -58,7 +58,7 @@ export default function RequestCard({
                 px: 1,
                 py: 0.25,
                 borderRadius: 1,
-                bgcolor: "action.hover",
+                bgcolor: "tableHead.primary",
                 fontWeight: 600,
               }}
             >

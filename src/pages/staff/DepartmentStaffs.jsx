@@ -75,15 +75,16 @@ export default function DepartmentStaffs() {
         Select a staff member to open Requests with the staff filter applied.
       </Typography>
 
-      <TextField
-        fullWidth
-        size="small"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search staff"
-        InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} /> }}
-        sx={{ mb: 2 }}
-      />
+      <Paper sx={{ p: 1.25, mb: 1.5 }}>
+        <TextField
+          fullWidth
+          size="small"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search staff"
+          InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} /> }}
+        />
+      </Paper>
 
       {isLoading && (
         <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
@@ -104,7 +105,7 @@ export default function DepartmentStaffs() {
       )}
 
       {!isLoading && !isError && filtered.length > 0 && (
-        <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+        <Paper variant="outlined" sx={{ overflow: "hidden" }}>
           <List disablePadding>
             {filtered.map((item, idx) => (
               <ListItemButton

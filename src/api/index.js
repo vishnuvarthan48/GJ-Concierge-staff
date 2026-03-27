@@ -11,7 +11,7 @@ const clearAuthAndRedirectToLogin = () => {
   removeStorageItem(STORAGE_KEYS.TENANT_ID);
   removeStorageItem(STORAGE_KEYS.LOCATION_ID);
   removeStorageItem(STORAGE_KEYS.STAFF_ID);
-  window.location.href = "/login";
+  window.location.href = "/";
 };
 
 const axiosServices = axios.create({
@@ -35,7 +35,10 @@ axiosServices.interceptors.request.use(
 axiosServices.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = String(error?.config?.url || "");
+    const isPublicTokenCall =
+      requestUrl.includes("/oauth/token") || requestUrl.includes("oauth/token");
+    if (error.response?.status === 401 && !isPublicTokenCall) {
       clearAuthAndRedirectToLogin();
       return Promise.reject(error);
     }

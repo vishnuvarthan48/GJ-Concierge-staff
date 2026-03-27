@@ -13,8 +13,8 @@ const MainLayout = () => {
           display: "flex",
           flexDirection: "column",
           minHeight: "100dvh",
-          minHeight: "100vh",
           pb: 0,
+          bgcolor: "background.default",
         }}
       >
         <Header />
@@ -22,7 +22,7 @@ const MainLayout = () => {
           component="main"
           sx={{
             flexGrow: 1,
-            p: 2,
+            p: { xs: 1.25, sm: 1.5 },
             pb: { xs: 10, sm: 3 },
             overflow: "auto",
             WebkitOverflowScrolling: "touch",

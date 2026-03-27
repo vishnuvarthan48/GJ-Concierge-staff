@@ -8,11 +8,18 @@ import DepartmentStaffs from "../pages/staff/DepartmentStaffs";
 import CreateServiceRequest from "../pages/create-request/CreateServiceRequest";
 import CreateRequestErrorFallback from "../pages/create-request/CreateRequestErrorFallback";
 import { MODULES } from "../constants/modules";
+import { getStorageItem } from "../utils/localStorageHandler";
+import { STORAGE_KEYS } from "../constants/storageKeys";
+
+const RootEntry = () => {
+  const token = getStorageItem(STORAGE_KEYS.ACCESS_TOKEN);
+  return token ? <Navigate to={`/${MODULES.DASHBOARD}`} replace /> : <Login />;
+};
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    element: <Login />,
+    path: "/",
+    element: <RootEntry />,
   },
   {
     path: "/",

@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }) => {
   const staffId = getStorageItem(STORAGE_KEYS.STAFF_ID);
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (!staffId) {

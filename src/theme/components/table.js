@@ -23,7 +23,7 @@ export const tableComponents = {
         transition: theme.transitions.create("background-color", {
           duration: theme.transitions.duration.shorter,
         }),
-        "&:hover": {
+        "&:active": {
           backgroundColor: theme.palette.action.hover,
         },
       }),

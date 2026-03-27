@@ -114,6 +114,27 @@ const api = {
     return Array.isArray(response.data) ? response.data : response.data?.list ?? [];
   },
 
+  /** Resolve scanned room and validate it belongs to staff location. */
+  getRoomDetailForQr: async (roomId) => {
+    const tenantId = resolveTenantId(getStorageItem(STORAGE_KEYS.STAFF));
+    const locationId = getStorageItem(STORAGE_KEYS.LOCATION_ID);
+    if (!tenantId || !locationId || !roomId) return null;
+    const response = await axiosServices.get(
+      `/${API_VERSION}/user/tenant/${tenantId}/room/${roomId}`,
+      {
+        params: { locationId },
+      },
+    );
+    const raw = response?.data;
+    const room = raw?.data ?? raw ?? null;
+    if (!room?.id) return null;
+    const roomLocationId = room?.location?.id ?? room?.locationId ?? null;
+    if (roomLocationId && String(roomLocationId) !== String(locationId)) {
+      throw new Error("Room not found.");
+    }
+    return room;
+  },
+
   /** Product requests */
   getProductRequests: async () => {
     const response = await axiosServices.get(

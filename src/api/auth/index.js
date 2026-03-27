@@ -1,4 +1,5 @@
 import axiosServices from "../index";
+import { getStaffBaseUrl } from "../staff";
 
 const API_ENDPOINT_LOGIN = "oauth/token";
 
@@ -17,8 +18,15 @@ const api = {
         Authorization: `Basic ${basicAuth}`,
       },
     });
-
     return response;
+  },
+
+  changePassword: async ({ currentPassword, newPassword }) => {
+    const response = await axiosServices.put(`/${getStaffBaseUrl()}/change-password`, {
+      currentPassword,
+      newPassword,
+    });
+    return response?.data;
   },
 };
 

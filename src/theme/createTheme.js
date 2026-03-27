@@ -25,8 +25,9 @@ export const createAppTheme = (mode = "light") => {
     palette,
     typography,
     components,
+    spacing: 8,
     shape: {
-      borderRadius: 8,
+      borderRadius: 14,
     },
     shadows,
   });

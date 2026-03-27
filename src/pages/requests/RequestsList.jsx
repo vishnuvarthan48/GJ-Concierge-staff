@@ -7,6 +7,7 @@ import {
   Autocomplete,
   TextField,
   Typography,
+  Paper,
 } from "@mui/material";
 import { MODULES } from "../../constants/modules";
 import { useStaffServiceRequestStatuses } from "../../query-hooks/requests/useStaffServiceRequestStatuses";
@@ -101,14 +102,7 @@ export default function RequestsList() {
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 2,
-        }}
-      >
+      <Box sx={{ mb: 1.5 }}>
         <Box>
           <Typography variant="h6" fontWeight={600}>
             Requests
@@ -128,7 +122,9 @@ export default function RequestsList() {
         scrollButtons="auto"
         allowScrollButtonsMobile
         sx={{
-          mb: 2,
+          mb: 1.5,
+          bgcolor: "background.paper",
+          borderRadius: 2,
           "& .MuiTabs-flexContainer": { flexWrap: "nowrap" },
           "& .MuiTab-root": {
             minHeight: 48,
@@ -145,12 +141,13 @@ export default function RequestsList() {
       </Tabs>
 
       {tab !== 2 && (
-        <Box
+        <Paper
           sx={{
             display: "flex",
             flexDirection: { xs: "column", sm: "row" },
-            gap: 2,
-            mb: 2,
+            gap: 1.5,
+            p: 1.25,
+            mb: 1.5,
           }}
         >
           <Autocomplete
@@ -179,7 +176,7 @@ export default function RequestsList() {
               sx={{ flex: 1 }}
             />
           )}
-        </Box>
+        </Paper>
       )}
 
       {tab === 0 && (

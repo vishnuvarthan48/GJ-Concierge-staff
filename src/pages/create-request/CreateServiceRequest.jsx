@@ -24,6 +24,18 @@ import { MODULES } from "../../constants/modules";
 import { QUERY_KEYS } from "../../constants/queryKeys";
 
 const toArray = (x) => (Array.isArray(x) ? x : (x?.list ?? []));
+const normalizeId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "object") {
+    if (typeof value.id === "string") return value.id;
+    if (typeof value.id === "number") return String(value.id);
+    if (typeof value.value === "string") return value.value;
+    if (typeof value.value === "number") return String(value.value);
+  }
+  return String(value);
+};
 
 /** Parse room ID from QR content (URL with roomId param or raw UUID). */
 function parseRoomIdFromQr(content) {
@@ -31,11 +43,38 @@ function parseRoomIdFromQr(content) {
   const s = content.trim();
   const uuidRegex =
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-  const match = s.match(uuidRegex);
-  if (match) return match[0];
+
+  // 1) Try JSON payload first: {"roomId":"..."} / {"room":"..."}
+  if ((s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(s);
+      const direct = parsed?.roomId || parsed?.room || parsed?.id;
+      if (typeof direct === "string") {
+        const m = direct.match(uuidRegex);
+        if (m) return m[0];
+      }
+    } catch (_) {
+      // not valid JSON, continue
+    }
+  }
+
+  // 2) Query params take precedence
   const roomParam =
     /[?&]roomId=([^&]+)/i.exec(s) || /[?&]room=([^&]+)/i.exec(s);
-  if (roomParam) return roomParam[1].trim();
+  if (roomParam) {
+    const decoded = decodeURIComponent((roomParam[1] || "").trim());
+    const m = decoded.match(uuidRegex);
+    if (m) return m[0];
+    if (decoded) return decoded;
+  }
+
+  // 3) Route pattern used in user app links: /r/{roomId}
+  const routeMatch = /\/r\/([0-9a-f-]{36})(?:[/?#]|$)/i.exec(s);
+  if (routeMatch?.[1]) return routeMatch[1];
+
+  // 4) Fallback: first UUID in content
+  const match = s.match(uuidRegex);
+  if (match) return match[0];
   return s.length < 50 ? s : null;
 }
 
@@ -50,8 +89,36 @@ export default function CreateServiceRequest() {
   const [serviceId, setServiceId] = useState("");
   const [comment, setComment] = useState("");
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [qrPrefill, setQrPrefill] = useState({
+    block: null,
+    floor: null,
+    room: null,
+  });
   const qrScannerRef = useRef(null);
   const scannerRef = useRef(null);
+  const scanInFlightRef = useRef(false);
+
+  const stopScannerSafely = async () => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try {
+      const maybePromise = scanner.stop?.();
+      if (maybePromise && typeof maybePromise.then === "function") {
+        await maybePromise;
+      }
+    } catch (_) {
+      // scanner may already be stopped; ignore
+    }
+    try {
+      const clearResult = scanner.clear?.();
+      if (clearResult && typeof clearResult.then === "function") {
+        await clearResult;
+      }
+    } catch (_) {
+      // ignore cleanup errors
+    }
+    scannerRef.current = null;
+  };
 
   const { data: blocksData, isLoading: blocksLoading } = useQuery({
     queryKey: [QUERY_KEYS.STAFF, "blocks"],
@@ -72,6 +139,12 @@ export default function CreateServiceRequest() {
     enabled: !!floorId,
   });
   const rooms = toArray(roomsData);
+
+  const { data: allRoomsData = [] } = useQuery({
+    queryKey: [QUERY_KEYS.STAFF, "rooms"],
+    queryFn: () => api.getRoomsForStaff(),
+  });
+  const allRooms = toArray(allRoomsData);
 
   const { data: servicesData = [], isLoading: servicesLoading } = useQuery({
     queryKey: [QUERY_KEYS.STAFF, "services"],
@@ -95,17 +168,71 @@ export default function CreateServiceRequest() {
   const floorOption = floors.find((f) => f.id === floorId) || null;
   const roomOption = rooms.find((r) => r.id === roomId) || null;
   const serviceOption = services.find((s) => s.id === serviceId) || null;
+  const visibleBlockOption =
+    blockOption || (qrPrefill.block && normalizeId(qrPrefill.block.id) === blockId
+      ? qrPrefill.block
+      : null);
+  const visibleFloorOption =
+    floorOption || (qrPrefill.floor && normalizeId(qrPrefill.floor.id) === floorId
+      ? qrPrefill.floor
+      : null);
+  const visibleRoomOption =
+    roomOption || (qrPrefill.room && normalizeId(qrPrefill.room.id) === roomId
+      ? qrPrefill.room
+      : null);
 
   const applyRoomFromSelection = (id) => {
-    setRoomId(id || "");
+    setRoomId(normalizeId(id));
     setRoomIdFromQr("");
+    setQrPrefill({ block: null, floor: null, room: null });
   };
 
-  const applyRoomFromQr = (id) => {
-    setRoomId(id || "");
-    setRoomIdFromQr(id || "");
-    setBlockId("");
-    setFloorId("");
+  const applyRoomFromQr = (id, roomDetail = null) => {
+    const normalizedRoomId = normalizeId(id);
+    setRoomId(normalizedRoomId);
+    setRoomIdFromQr(normalizedRoomId);
+    const matchedRoom =
+      roomDetail ||
+      (allRooms || []).find(
+      (r) => normalizeId(r?.id) === normalizedRoomId,
+      );
+    const nextFloorId = normalizeId(
+      matchedRoom?.floor?.id ??
+        matchedRoom?.floorId ??
+        matchedRoom?.room?.floor?.id ??
+        "",
+    );
+    const nextBlockId = normalizeId(
+      matchedRoom?.block?.id ??
+        matchedRoom?.blockId ??
+        matchedRoom?.floor?.block?.id ??
+        "",
+    );
+    setBlockId(nextBlockId);
+    setFloorId(nextFloorId);
+    setQrPrefill({
+      block: nextBlockId
+        ? {
+            id: nextBlockId,
+            name:
+              matchedRoom?.block?.name ??
+              matchedRoom?.floor?.block?.name ??
+              "Scanned block",
+          }
+        : null,
+      floor: nextFloorId
+        ? {
+            id: nextFloorId,
+            name: matchedRoom?.floor?.name ?? "Scanned floor",
+          }
+        : null,
+      room: normalizedRoomId
+        ? {
+            id: normalizedRoomId,
+            name: matchedRoom?.name ?? "Scanned room",
+          }
+        : null,
+    });
   };
 
   const createMutation = useMutation({
@@ -147,27 +274,38 @@ export default function CreateServiceRequest() {
 
   const handleCloseScan = async () => {
     setScanDialogOpen(false);
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch (_) {}
-      scannerRef.current = null;
-    }
+    await stopScannerSafely();
   };
 
   const handleScanSuccess = (decodedText) => {
+    if (scanInFlightRef.current) return;
     const id = parseRoomIdFromQr(decodedText);
-    if (id) {
-      applyRoomFromQr(id);
-      toast.success("Room captured from QR.");
-      handleCloseScan();
-    } else {
+    if (!id) {
       toast.error("QR did not contain a valid room ID.");
+      return;
     }
+    scanInFlightRef.current = true;
+    api
+      .getRoomDetailForQr(id)
+      .then((roomDetail) => {
+        if (!roomDetail?.id) {
+          toast.error("Room not found.");
+          scanInFlightRef.current = false;
+          return;
+        }
+        applyRoomFromQr(roomDetail.id, roomDetail);
+        toast.success("Room captured from QR.");
+        handleCloseScan();
+      })
+      .catch((err) => {
+        toast.error(err?.response?.data?.error?.message || err?.message || "Room not found.");
+        scanInFlightRef.current = false;
+      });
   };
 
   useEffect(() => {
     if (!scanDialogOpen) return;
+    scanInFlightRef.current = false;
     const id = setTimeout(async () => {
       const el = document.getElementById("qr-reader");
       if (!el) return;
@@ -186,10 +324,7 @@ export default function CreateServiceRequest() {
     }, 300);
     return () => {
       clearTimeout(id);
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current = null;
-      }
+      stopScannerSafely();
     };
   }, [scanDialogOpen]);
 
@@ -198,7 +333,7 @@ export default function CreateServiceRequest() {
 
   return (
     <Box>
-      <Typography variant="h6" fontWeight={600} gutterBottom>
+      <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5 }}>
         Create service request
       </Typography>
 
@@ -207,7 +342,7 @@ export default function CreateServiceRequest() {
           <CircularProgress />
         </Box>
       ) : (
-        <Paper component="form" onSubmit={handleSubmit} sx={{ p: 2 }}>
+        <Paper component="form" onSubmit={handleSubmit} sx={{ p: 1.75 }}>
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
             Select room (Block → Floor → Room) or scan QR
           </Typography>
@@ -215,11 +350,12 @@ export default function CreateServiceRequest() {
             <Autocomplete
               size="small"
               options={blocks}
-              value={blockOption}
+              value={visibleBlockOption}
               onChange={(_, value) => {
-                setBlockId(value?.id ?? "");
+                setBlockId(normalizeId(value?.id));
                 setFloorId("");
                 setRoomId("");
+                setQrPrefill((prev) => ({ ...prev, block: null, floor: null, room: null }));
               }}
               getOptionLabel={(opt) => opt?.name ?? ""}
               isOptionEqualToValue={(a, b) => a?.id === b?.id}
@@ -231,10 +367,11 @@ export default function CreateServiceRequest() {
             <Autocomplete
               size="small"
               options={floors}
-              value={floorOption}
+              value={visibleFloorOption}
               onChange={(_, value) => {
-                setFloorId(value?.id ?? "");
+                setFloorId(normalizeId(value?.id));
                 setRoomId("");
+                setQrPrefill((prev) => ({ ...prev, floor: null, room: null }));
               }}
               getOptionLabel={(opt) => opt?.name ?? ""}
               isOptionEqualToValue={(a, b) => a?.id === b?.id}
@@ -247,8 +384,8 @@ export default function CreateServiceRequest() {
             <Autocomplete
               size="small"
               options={rooms}
-              value={roomOption}
-              onChange={(_, value) => applyRoomFromSelection(value?.id ?? "")}
+              value={visibleRoomOption}
+              onChange={(_, value) => applyRoomFromSelection(value?.id)}
               getOptionLabel={(opt) => opt?.name ?? ""}
               isOptionEqualToValue={(a, b) => a?.id === b?.id}
               renderInput={(params) => (
@@ -265,18 +402,18 @@ export default function CreateServiceRequest() {
             size="small"
             startIcon={<QrCodeScannerIcon />}
             onClick={handleOpenScan}
-            sx={{ mb: 2 }}
+            sx={{ mb: 1.5 }}
           >
             Scan QR in room
           </Button>
 
-          <Divider sx={{ my: 2 }} />
+          <Divider sx={{ my: 1.5 }} />
 
           <Autocomplete
             size="small"
             options={services}
             value={serviceOption}
-            onChange={(_, value) => setServiceId(value?.id ?? "")}
+            onChange={(_, value) => setServiceId(normalizeId(value?.id))}
             getOptionLabel={(opt) => opt?.name ?? ""}
             isOptionEqualToValue={(a, b) => a?.id === b?.id}
             renderInput={(params) => (
@@ -292,7 +429,7 @@ export default function CreateServiceRequest() {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Comment (optional)"
             multiline
-            rows={2}
+            rows={3}
             sx={{ mb: 2 }}
           />
           {createMutation.isError && (

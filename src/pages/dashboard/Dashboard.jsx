@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Card, CardContent, Typography, Grid, Alert, Button } from "@mui/material";
+import { Box, Card, CardContent, Typography, Grid, Alert, Button, Paper } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import BuildIcon from "@mui/icons-material/Build";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
@@ -28,9 +28,12 @@ const SummaryCard = ({ title, count, icon: Icon, onClick }) => (
     onClick={onClick}
     sx={{
       cursor: "pointer",
-      borderRadius: 2,
-      "&:active": { opacity: 0.95 },
       height: "100%",
+      "&:active": {
+        opacity: 0.95,
+        boxShadow: 4,
+        transform: "translateY(-1px)",
+      },
     }}
   >
     <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
@@ -203,7 +206,7 @@ const Dashboard = () => {
         Create service request
       </Button>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={1.5}>
         <Grid size={{ xs: 12 }}>
           <SummaryCard
             title={isDeptAdmin ? "Total department requests" : "Total requests"}
@@ -230,7 +233,7 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-        <Box sx={{ mt: 3 }}>
+      <Paper sx={{ mt: 2.5, p: 1.5 }}>
         <Box
           sx={{
             display: "flex",
@@ -260,7 +263,7 @@ const Dashboard = () => {
             No recent requests
           </Typography>
         )}
-      </Box>
+      </Paper>
 
       <RequestDetailDialog
         open={detailOpen}
